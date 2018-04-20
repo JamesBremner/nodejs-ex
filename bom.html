@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BOM</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            border: 1px solid black;
+            width: 100%;
+        }
+        th, td {
+            padding: 5px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+<p>Select Materials JSON file: <input type="file" id="materials">
+<p>Select Pulley Specifications JSON file:
+<input type="file" id="file" name="Pulley Specifications JSON file" enctype="multipart/form-data"/>
+<p><input type="button" onclick="runClick()" value="Calculate BOM">
+
+<p id="bom"> </p>
+<script src="bom.js"></script>
+</body>
+</html>
