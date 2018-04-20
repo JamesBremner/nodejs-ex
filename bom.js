@@ -187,8 +187,8 @@ function MaterialsPost()
             SpecsPost();
         }
     };
-    request.open("GET", 'materials?jsoninput='+JSON.stringify(materials) , true);
-    request.send();
+    request.open("POST", 'materials' , true);
+    request.send('jsoninput='+JSON.stringify(materials));
 }
 
 /**  User has clicked RUN! button */
