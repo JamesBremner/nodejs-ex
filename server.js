@@ -218,7 +218,7 @@ function materials( res, data )
     console.log('materials rcvd');
 
     theMaterial.material = JSON.parse( data );
-
+    /*
     //console.log( data );
     // write to file
     fs.writeFileSync(
@@ -228,7 +228,7 @@ function materials( res, data )
             if (err)
                 throw err;
         });
-
+*/
     res.writeHead(200, {'Content-Type': 'text/plain'} );
     res.write( 'OK' );
     res.end();
