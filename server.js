@@ -231,7 +231,8 @@ var theBill = {
         this.BOM.total.quantity = 1;
         this.BOM.total.unit = 'Each';
         this.BOM.total.cost_per_unit
-            = this.costSum( this.BOM.endDiskA.total );
+            = this.costSum( this.BOM.endDiskA.total )
+            + this.costSum( this.BOM.shell.total );
         this.costCalculate( this.BOM.total );
     },
 };
