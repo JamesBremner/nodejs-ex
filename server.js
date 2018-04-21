@@ -93,13 +93,19 @@ function BOMLine() {
     unit : ' ';
 }
 
-/** theBOM ******************************************/
+/** theBIll calculates the BOM ******************************************/
 
 var theBill = {
+
+    // the BOM
 
     BOM : {
         endDiskA : {
             steel : new BOMLine(),
+            total : new BOMLine(),
+        },
+        shell : {
+            plate : new BOMLine(),
             total : new BOMLine(),
         },
         total : new BOMLine,
@@ -156,6 +162,26 @@ var theBill = {
         this.costCalculate( this.BOM.endDiskA.total );
     },
 
+    shellBuild : function()
+    {
+        shellPlate = this.selectShellPlate();
+        this.BOM.shell.plate.description
+            = theMaterial.findMaterial( theSpecs.shell.material.itemNumber ).description
+            + ' ( ' + shellPlate.thick + ' ) ';
+        this.BOM.shell.plate.partnumber = theSpecs.shell.material.itemNumber;
+        this.BOM.shell.plate.cost_per_unit = shellPlate.cost;
+        this.BOM.shell.plate.quantity = 1000;
+        this.BOM.shell.plate.unit = 'Kg';
+        this.costCalculate( this.BOM.shell.plate );
+
+        this.BOM.shell.total.partnumber = 'shell';
+        this.BOM.shell.total.quantity = 1;
+        this.BOM.shell.total.unit = 'Each';
+        this.BOM.shell.total.cost_per_unit
+            = this.costSum( this.BOM.shell.plate );
+        this.costCalculate( this.BOM.shell.total );
+    },
+
     selectShellPlate : function()
     {
         theSpecs.shell.thickness = parseFloat(theSpecs.shell.thickness);
@@ -198,7 +224,7 @@ var theBill = {
     },
     calculate : function()
     {
-        this.selectShellPlate();
+        this.shellBuild();
         this.endDiskBuild();
 
         this.BOM.total.partnumber = 'pulley';
@@ -227,17 +253,7 @@ function materials( res, data )
     //console.log( data );
 
     theMaterial.material = JSON.parse( data );
-    /*
-    //console.log( data );
-    // write to file
-    fs.writeFileSync(
-        __dirname + "\\materials.json",
-        data,
-        function(err){
-            if (err)
-                throw err;
-        });
-*/
+
     res.writeHead(200, {'Content-Type': 'text/plain'} );
     res.write( 'OK' );
     res.end();
@@ -298,15 +314,14 @@ http.createServer(function (req, res) {
     {
         console.log('POST rcvd' );
 
-
         req.on('data', (chunk) => {
-            console.log('chunk');
             postbody.push(chunk);
         }).on('end', () => {
-            console.log('end');
+
             postbody = Buffer.concat(postbody).toString();
+
             // at this point, `body` has the entire request body stored in it as a string
-            //console.log( postbody );
+
             materials( res, postbody );
             postbody = [];
         });
