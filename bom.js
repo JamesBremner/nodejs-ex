@@ -84,6 +84,8 @@ function ComponentTopDisplay( componentName, bom )
     display += '<table>';
     display += '<tr><th>   </th><th>Description</th><th>Part #</th><th>Quantity</th><th>Units</th>';
     display += '<th>Cost/Unit</th><th>Total Cost</th></tr>';
+
+;
 }
 
 /*  display pulley total cost */
@@ -149,6 +151,8 @@ document.getElementById("bom").innerHTML = display;
 
 }
 
+/** Request server to run BOM calculation */
+
 function bom_run() {
     var request = new XMLHttpRequest();
     request.onreadystatechange = function () {
@@ -157,7 +161,9 @@ function bom_run() {
             // success.  Reformat as table display
             bom_to_table( this.responseText );
         }
-        if( this.status == 200 ) {
+        if( this.status == 500 ) {
+
+            // error on server
             document.getElementById("bom").innerHTML = 'Server error: ' + this.responseText;
         }
     };
@@ -178,17 +184,21 @@ function SpecsPost()
     request.send();
 }
 
+/** Post materials to server */
+
 function MaterialsPost()
 {
     console.log('MaterialsPost');
     var request = new XMLHttpRequest();
     request.onreadystatechange = function () {
         if (this.readyState == 4 && this.status == 200) {
+
+            // success.  Post the pulley specs.
             SpecsPost();
         }
     };
     request.open("POST", 'materials' , true);
-    request.send('jsoninput='+JSON.stringify(materials));
+    request.send(JSON.stringify(materials));
 }
 
 /**  User has clicked RUN! button */
@@ -198,31 +208,6 @@ function runClick()
     MaterialsPost();
 }
 
-function bom_run_old()
-{
-    MaterialsPost();
-
-	var request = new XMLHttpRequest();
-	request.onreadystatechange = function() {
-	    if (request.readyState === 4) {
-	        if (request.status === 200) {
-	            document.body.className = 'ok';
-
-	            // convert server response to BOM table
-	            bom_to_table(request.responseText);
-	        } else if (!isValid(this.response) && this.status == 0) {
-	            document.body.className = 'error offline';
-	            console.log("The computer appears to be offline.");
-	        } else {
-	            document.body.className = 'error';
-	        }
-	    }
-	};
-	request.open("GET", 'run?jsoninput='+JSON.stringify(json_input) , true);
-
-	request.send(null);
-
-}
 
 function readMaterials (evt) {
     var files = evt.target.files;

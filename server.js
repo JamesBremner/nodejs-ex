@@ -101,7 +101,8 @@ var theBill = {
         endDiskA : {
             steel : new BOMLine(),
             total : new BOMLine(),
-        }
+        },
+        total : new BOMLine,
     },
 
     myShellInnerDiameter : -1e10,
@@ -199,6 +200,13 @@ var theBill = {
     {
         this.selectShellPlate();
         this.endDiskBuild();
+
+        this.BOM.total.partnumber = 'pulley';
+        this.BOM.total.quantity = 1;
+        this.BOM.total.unit = 'Each';
+        this.BOM.total.cost_per_unit
+            = this.costSum( this.BOM.endDiskA.total );
+        this.costCalculate( this.BOM.total );
     },
 };
 
@@ -216,6 +224,7 @@ function serve_file( res, reqfile, content )
 function materials( res, data )
 {
     console.log('materials rcvd');
+    //console.log( data );
 
     theMaterial.material = JSON.parse( data );
     /*
@@ -280,8 +289,29 @@ function bom_run( res )
 
 /** Create server */
 
+let postbody = [];
+
 http.createServer(function (req, res) {
 
+
+    if( req.method == 'POST')
+    {
+        console.log('POST rcvd' );
+
+
+        req.on('data', (chunk) => {
+            console.log('chunk');
+            postbody.push(chunk);
+        }).on('end', () => {
+            console.log('end');
+            postbody = Buffer.concat(postbody).toString();
+            // at this point, `body` has the entire request body stored in it as a string
+            //console.log( postbody );
+            materials( res, postbody );
+            postbody = [];
+        });
+        return;
+    }
     reqfile = url.parse(req.url).pathname;
     console.log( 'req= ', reqfile );
 
@@ -295,9 +325,12 @@ http.createServer(function (req, res) {
 
     } else  if( reqfile == '/materials' )  {
 
+        /*
         materials(
             res,
             url.parse(req.url, true).query.jsoninput );
+*/
+
 
     } else  if( reqfile == '/specs' )  {
 
