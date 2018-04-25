@@ -25,10 +25,10 @@ function bom_line_expected( name, line )
     display += '<td width="100px">' + name + '</td>';
     display += '<td width="200px">' + line["description"] + '</td> ';
     display += '<td>' +line["partnumber"] + '</td>';
-    display += '<td>' +line["quantity"] + '</td>';
+    display += '<td>' +line["quantity"].toFixed(2) + '</td>';
     display += '<td>' +line["unit"] + '</td>';
-    display += '<td>' +line["cost_per_unit"] + '</td>';
-    display += '<td>' +line["cost"] + '</td>';
+    display += '<td>' +line["cost_per_unit"].toFixed(2) + '</td>';
+    display += '<td>' +line["cost"].toFixed(2) + '</td>';
     display += '</tr>';
 }
 

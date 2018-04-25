@@ -65,11 +65,42 @@ var theMaterial = {
         return ret
     },
 
+    findBar : function( number, diameter ) {
+        bar = { diameter : 1e10 };
+        for (let mat in this.material) {
+            if (this.material[mat].group == 'Bar') {
+                if (this.material[mat].material == number) {
+                    mat_dia = parseFloat(this.material[mat].diameter);
+                    //console.log( this.material[mat] );
+                    //console.log( diameter +' '+mat_dia+' '+bar.diameter);
+                    if( mat_dia >= diameter) {
+                        if( mat_dia < parseFloat(bar.diameter) ) {
+                            bar = this.material[mat];
+                        }
+                    }
+                }
+            }
+        }
+        return bar;
+    },
+
+    findBarNormalize : function()
+    {
+        let norm = { cost: -1 };
+        for( let mat in this.material ) {
+            if (this.material[mat].group === 'Normalize') {
+                norm = this.material[mat];
+                break;
+            }
+        }
+        return norm;
+    },
+
     MaterialToRemoveForShellRoundness : function( thick )
     {
         for( let mat in this.material )
         {
-            if( this.material[ mat ].group == 'Roll') {
+            if( this.material[ mat ].group === 'Roll') {
                 for(var i = 0; i < this.material[ mat ].out_of_roundness.length; i++) {
                     if( this.material[ mat ].out_of_roundness[i].t > thick )
                     {
@@ -84,6 +115,8 @@ var theMaterial = {
 
 var theSpecs;
 
+/** BOMLine ****************************************************************/
+
 function BOMLine() {
     quantity : -1;
     cost_per_unit : -1;
@@ -91,11 +124,38 @@ function BOMLine() {
     partnumber : ' ';
     description : ' ';
     unit : ' ';
-}
+};
+BOMLine.prototype.set = function( description, part, quantity, units )
+{
+    this.description = description;
+    this.partnumber  = part;
+    this.quantity    = quantity;
+    this.unit        = units;
+};
+BOMLine.prototype.costCalculate = function() {
+    if( this.quantity < 0 || this.cost_per_unit < 0 )
+        this.cost = -1;
+    else
+        this.cost = this.quantity * this.cost_per_unit;
+};
+BOMLine.prototype.costSum = function()
+{
+    if( this.cost < 0 )
+        return 0;
+    else
+        return this.cost;
+},
+BOMLine.prototype.add = function( line )
+{
+
+    this.cost_per_unit = this.costSum() + line.costSum();
+    this.costCalculate();
+    console.log('add '+this.cost_per_unit +' '+ line.costSum());
+};
 
 /** theBIll calculates the BOM ******************************************/
 
-var theBill = {
+let theBill = {
 
     // the BOM
 
@@ -108,12 +168,18 @@ var theBill = {
             plate : new BOMLine(),
             total : new BOMLine(),
         },
+        shaft : {
+            bar : new BOMLine(),
+            normalize : new BOMLine(),
+            total : new BOMLine(),
+        },
         total : new BOMLine,
     },
 
     myShellInnerDiameter : -1e10,
     myExtraEndDiskDiameter : 0,
     myEndDiskScrapFactor : 1.3225,
+    myExtraBarLength : 8,
 
     costCalculate : function( line )
     {
@@ -123,13 +189,7 @@ var theBill = {
             line.cost = line.quantity * line.cost_per_unit;
     },
 
-    costSum : function( line )
-    {
-        if( line.cost < 0 )
-            return 0;
-        else
-            return line.cost;
-    },
+
 
     endDiskBuild  : function()
     {
@@ -137,7 +197,7 @@ var theBill = {
             theSpecs.endDiskAssembly.disk.material.itemNumber,
             parseFloat(theSpecs.endDiskAssembly.hub.innerWidth)
         );
-        if( plate == undefined )
+        if( plate === undefined )
             return;
         plate_material = theMaterial.findMaterial(
             theSpecs.endDiskAssembly.disk.material.itemNumber
@@ -147,19 +207,16 @@ var theBill = {
             = plate_material.description + ' ( ' + plate.thick + ' ) ';
         this.BOM.endDiskA.steel.cost_per_unit = plate.cost;
         OD = parseFloat(this.myShellInnerDiameter) + this.myExtraEndDiskDiameter;
-        var volume =  OD * OD * Math.PI/4.0 * plate.thick * this.myEndDiskScrapFactor;
+        let volume =  OD * OD * Math.PI/4.0 * plate.thick * this.myEndDiskScrapFactor;
         this.BOM.endDiskA.steel.quantity = volume * plate.density / 10.0 / 10.0 / 10.0 / 1000.0; // This is the quantity of the steel.
         this.costCalculate( this.BOM.endDiskA.steel );
         this.BOM.endDiskA.steel.partnumber = theSpecs.endDiskAssembly.disk.material.itemNumber;
         this.BOM.endDiskA.steel.unit = 'Kg';
 
         // assume both end disks are identical
-        this.BOM.endDiskA.total.partnumber = 'endDisk';
-        this.BOM.endDiskA.total.quantity = 2;
-        this.BOM.endDiskA.total.unit = 'Each';
-        this.BOM.endDiskA.total.cost_per_unit
-            = this.costSum( this.BOM.endDiskA.steel );
-        this.costCalculate( this.BOM.endDiskA.total );
+        this.BOM.endDiskA.total.set( 'total', 'endDisk', 2, 'Each');
+        this.BOM.endDiskA.total.add( this.BOM.endDiskA.steel );
+
     },
 
     shellBuild : function()
@@ -174,12 +231,55 @@ var theBill = {
         this.BOM.shell.plate.unit = 'Kg';
         this.costCalculate( this.BOM.shell.plate );
 
-        this.BOM.shell.total.partnumber = 'shell';
-        this.BOM.shell.total.quantity = 1;
-        this.BOM.shell.total.unit = 'Each';
-        this.BOM.shell.total.cost_per_unit
-            = this.costSum( this.BOM.shell.plate );
-        this.costCalculate( this.BOM.shell.total );
+        this.BOM.shell.total.set( 'total', 'shell', 1, 'Each' );
+        this.BOM.shell.total.add( this.BOM.shell.plate );
+    },
+
+    shaftBuild : function()
+    {
+        // Find the largest diameter of the required shaft. Could either be at the center or the end disk
+        diameter = parseFloat( theSpecs.shaft.diameterAtCenter);
+        if( parseFloat( theSpecs.shaft.diameterAtEndDisk) > diameter )
+            diameter =  parseFloat( theSpecs.shaft.diameterAtEndDisk);
+        bar = theMaterial.findBar( theSpecs.shaft.material.itemNumber, diameter );
+
+        barLength
+            = this.myExtraBarLength
+            + parseFloat(theSpecs.shaft.centersSupport)
+            + parseFloat(theSpecs.shaft.axialExtensionA)
+            + parseFloat(theSpecs.shaft.axialExtensionB);
+
+        barVolume = Math.PI*bar.diameter_cost*bar.diameter_cost* barLength / 4.0;
+
+        barMass = barVolume * parseFloat(theSpecs.shaft.material.density) / 1000000;
+
+        this.BOM.shaft.bar.set(
+            bar.description,
+            bar.partnumber,
+            barMass,
+            'Kg'
+        );
+        this.BOM.shaft.bar.cost_per_unit = bar.cost;
+        this.BOM.shaft.bar.costCalculate();
+
+        // normalize
+        let norm = theMaterial.findBarNormalize();
+        if( norm.cost > 0 ) {
+            this.BOM.shaft.normalize.set(
+                'Normalize',
+                norm.partnumber,
+                barMass / 1000, // Convert to tons
+                'tons'
+            );
+            this.BOM.shaft.normalize.cost_per_unit = norm.cost;
+            this.BOM.shaft.normalize.costCalculate();
+        }
+
+        // total
+        this.BOM.shaft.total.set( 'total', 'shaft', 1, 'Each' );
+        this.BOM.shaft.total.add( this.BOM.shaft.bar );
+        this.BOM.shaft.total.add( this.BOM.shaft.normalize );
+
     },
 
     selectShellPlate : function()
@@ -226,14 +326,13 @@ var theBill = {
     {
         this.shellBuild();
         this.endDiskBuild();
+        this.shaftBuild();
 
-        this.BOM.total.partnumber = 'pulley';
-        this.BOM.total.quantity = 1;
-        this.BOM.total.unit = 'Each';
-        this.BOM.total.cost_per_unit
-            = this.costSum( this.BOM.endDiskA.total )
-            + this.costSum( this.BOM.shell.total );
-        this.costCalculate( this.BOM.total );
+        this.BOM.total.set( 'total', 'pulley', 1, 'Each');
+        this.BOM.total.add( this.BOM.endDiskA.total );
+        this.BOM.total.add( this.BOM.shell.total );
+        this.BOM.total.add( this.BOM.shaft.total );
+
     },
 };
 
